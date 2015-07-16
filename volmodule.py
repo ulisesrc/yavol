@@ -37,7 +37,7 @@ class retObj():
 
 class VolatilityFunctions():
 
-    def __init__(self, fname, profile, yara_rules_path):
+    def __init__(self, fname, profile, yara_rules_path, output_path):
         self.config = conf.ConfObject()
         self.path = fname
         self.profile = profile
@@ -57,7 +57,7 @@ class VolatilityFunctions():
         #self.config.OUTPUT_FILE = args.file + '.sqlite'
 
         self.config.OUTPUT = 'sqlite'
-        self.config.OUTPUT_FILE = 'output.sqlite'
+        self.config.OUTPUT_FILE = output_path
         #self.config.output_file = "file:///home/yary/git/yavol_qt/yavol.sqlite"
         #self.config.YARA_FILE = config.yara_sigs
         self.config.parse_options(False)

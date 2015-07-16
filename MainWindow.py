@@ -5,7 +5,7 @@ from PyQt4.QtCore import (PYQT_VERSION_STR, QFile, QFileInfo, QSettings,
                           QString, QT_VERSION_STR, QTimer, QVariant, Qt)
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-from os import remove
+from os import remove, path
 
 from functools import partial
 
@@ -24,10 +24,25 @@ import yarascanTreeView
 
 from shutil import copyfile
 
+from time import time
 
-# TODO: add scanDlg class that will provide user with option which sigs use for scanning
+from datetime import datetime
+
+#import hashlib  #hashfile fnc
 
 
+# TODO: do not run module more than once, just open the result from db
+# TODO: app crashes: run pslist, then pscan -> crash
+# I suspect the threads, one finish
+#
+# TODO: yarascan: there is one situation which needs to be handled properly (no hit)
+# TODO: ADD Open Analysis functionality:
+'''
+- check if the file is still there
+- set the profile to the last used value
+- check the tables and offer displaying the results
+
+'''
 
 
 def logger(func):
@@ -36,14 +51,18 @@ def logger(func):
         return func(*args, **kwargs)
 
     return forward
-
-
+'''
 class ResultObj(QObject):
     def __init__(self, moduleName, retValObj, volInstance):
         self.moduleName = moduleName
         self.retValObj = retValObj
         self.volInstance = volInstance
+'''
 
+class ResultObj(QObject):
+    def __init__(self, moduleName, retValObj):
+        self.moduleName = moduleName
+        self.retValObj = retValObj
 
 class QueueObj(QObject):
     def __init__(self, volinstance, module, filename, profile, yara_rule_name, output_path):
@@ -53,7 +72,6 @@ class QueueObj(QObject):
         self.volinst = volinstance
         self.yara_rule = yara_rule_name
         self.output_path = output_path
-
 
 class Worker(QThread):
     finished = pyqtSignal(object)
@@ -88,13 +106,13 @@ class Worker(QThread):
         output_path = query.output_path
         #yara_rules_path = settingsDlg.getParticularSettingValue('yara_rules_dir')
 
-        if volatilityInstance == None:
-            volatilityInstance = volmodule.VolatilityFunctions(filename, profile, yara_rule, output_path)
+        #if volatilityInstance == None:
+        volatilityInstance = volmodule.VolatilityFunctions(filename, profile, yara_rule, output_path)
         # TODO: check if db already contains volmodule output before running the module
         retObj = volatilityInstance.runModule(moduleName)
 
-        self.finished.emit(ResultObj(moduleName, retObj, volatilityInstance))
-
+        #self.finished.emit(ResultObj(moduleName, retObj, volatilityInstance))
+        self.finished.emit(ResultObj(moduleName, retObj))
 
 class Window(QMainWindow):
     def __init__(self, parent=None):
@@ -107,6 +125,7 @@ class Window(QMainWindow):
         self.dirty = False
         self.filename = None
         self.dir = None
+        self.fullpath = None
         self.output_path = "tmp/output.sqlite"
         self.volatilityInstance = None
         self.profile = "imageinfo"
@@ -145,7 +164,7 @@ class Window(QMainWindow):
         fileOpenAction = self.createAction("&Open Analysis", self.doNothing,
                                            QKeySequence.Open, "fileopen", "Restore previous analysis")
 
-        fileSaveAction = self.createAction("&Save Analysis", self.fileSave,
+        fileSaveAction = self.createAction("&Save Analysis", partial(self.fileSave, False),
                                            QKeySequence.Save, "filesave", "Restore previous analysis")
 
         fileExitAction = self.createAction("&Exit", self.appExit,
@@ -303,6 +322,8 @@ class Window(QMainWindow):
             pprint.pprint(dialog.selected_rules)
 
             if len(dialog.selected_rules) > 0:
+
+                self.volatilityInstance = None  #test
                 self.yarascan_queue_size = len(dialog.selected_rules)
                 for rule in dialog.selected_rules:
                     self.path_to_yara_rule = str(path_to_rules + '/' + rule + '.yar')
@@ -335,20 +356,38 @@ class Window(QMainWindow):
             if reply == QMessageBox.Cancel:
                 return False
             elif reply == QMessageBox.Yes:
-                return self.fileSave()
+                return self.fileSave(True)
         return True
 
     def fileOpen(self):
         if not self.okToContinue():
             return
-        wdir = os.path.dirname(self.filename) if self.filename is not None else "."
+        wdir = path.dirname(self.filename) if self.filename is not None else "."
         formats = ["*.img", "*.dmp"]
         fname = unicode(QFileDialog.getOpenFileName(self, "YaVol - Choose Image", wdir,
                                                     "Memory files (%s)" % " ".join(formats)))
         if fname:
             # self.loadFile(fname)
-            self.filename = fname
-            self.dir = wdir
+
+            #calculate the hash
+            #md5 = self.hashfile(open(fname), hashlib.md5())
+            #print md5
+
+            #get current datetime
+            unix_time = int(time())
+
+            #get image file size
+            file_size = path.getsize(fname)
+
+
+            self.filename = path.basename(fname)
+            self.dir = path.dirname(fname)
+            self.fullpath = fname
+
+            #store image data
+            db = dbmodule.sqlitequery('fileOpen', self.output_path)
+            db.storeImageData(imgName=self.filename, imgSize=file_size, imgPath=self.dir, time=unix_time)
+
 
             fileNameLabel = QLabel("Image: ")
             profileLabel = QLabel("Profile: ")
@@ -379,17 +418,15 @@ class Window(QMainWindow):
             self.addTabFnc("Image", horizontalLayout)
             self.dirty = True
 
-    def fileSave(self):
+    def fileSave(self, exit):
 
         #check the dirty flag
         if self.dirty == False:
             #show dialog that there is nothing to be saved
-            #QMessageBox.warning(self, "Save analysis", "There is nothing to be saved\n"
-            #                                           "...", QMessageBox.Ok)
             self.showWarningInfo("Save analysis", "There is nothing to be saved")
         else:
             # show the save dialog
-            #filename = QFileDialog.getSaveFileName(self, "Save analysis", "", "Database file (*.sqlite)")
+
             filename, filter = QFileDialog.getSaveFileNameAndFilter(self, 'Save file', '', "Database file (*.sqlite)")
             if filename !="":
                 # copy the /tmp/output.sqlite to the location selected by the user
@@ -409,8 +446,14 @@ class Window(QMainWindow):
                         copyfile(src, dst)
                         #changes were stored, unset the dirty flag
                         self.dirty = False
-
-                        self.output_path = dst
+                        if exit:
+                            remove(src)
+                            #returning true to the caller (okToContinue) will cause exit
+                            return True
+                        else:
+                            remove(src)
+                            self.output_path = dst
+                            self.dirty = False
 
                     except IOError as e:
                         #print "I/O error({0}): {1}".format(e.errno, e.strerror)
@@ -431,7 +474,8 @@ class Window(QMainWindow):
             QCoreApplication.instance().quit()
         else:
             if self.okToContinue():
-                remove('tmp/output.sqlite')
+                if path.isfile('tmp/output.sqlite'):
+                    remove('tmp/output.sqlite')
                 QCoreApplication.instance().quit()
 
     def storeProfile(self, profile):
@@ -443,6 +487,9 @@ class Window(QMainWindow):
         self.profile = unicode(profile)
         self.displayInLog("Profile changed: " + unicode(profile))
 
+        db = dbmodule.sqlitequery('updateProfile', self.output_path)
+        db.updateProfileInfo(self.profile)
+
     def handle_result(self, result):
         # this method is a callback which should
         # process the data from the worker thread
@@ -451,9 +498,9 @@ class Window(QMainWindow):
         # in case we have run a module for the first time
         # worker thread will return handle to the volatility instance
         # storing it we could save some time with the next run
-        if not self.volatilityInstance:
-            if result.volInstance:
-                self.volatilityInstance = result.volInstance
+        #if not self.volatilityInstance:
+        #    if result.volInstance:
+        #        self.volatilityInstance = result.volInstance
 
         #if the result comes from yarascan,
         # 1) check if the value of the yara_scan_queue_size > 1
@@ -522,17 +569,17 @@ class Window(QMainWindow):
         if self.volatilityInstance != None:
             self.displayInLog("Info: Volatility instance found")
             if self.path_to_yara_rule:
-                self.thread_process(self.volatilityInstance, moduleName, self.filename, self.profile,
+                self.thread_process(self.volatilityInstance, moduleName, self.fullpath, self.profile,
                                     self.path_to_yara_rule, self.output_path)
             else:
-                self.thread_process(self.volatilityInstance, moduleName, self.filename, self.profile,
+                self.thread_process(self.volatilityInstance, moduleName, self.fullpath, self.profile,
                                     None, self.output_path)
         else:
             self.displayInLog("Info: Volatility instance missing!")
             if self.path_to_yara_rule:
-                self.thread_process(None, moduleName, self.filename, self.profile, self.path_to_yara_rule, self.output_path)
+                self.thread_process(None, moduleName, self.fullpath, self.profile, self.path_to_yara_rule, self.output_path)
             else:
-                self.thread_process(None, moduleName, self.filename, self.profile, None, self.output_path)
+                self.thread_process(None, moduleName, self.fullpath, self.profile, None, self.output_path)
 
     def addTabFnc(self, name, layout):
         self.widget = QWidget()
@@ -590,6 +637,12 @@ class Window(QMainWindow):
 
     def displayInLog(self, content):
         self.listWidget.addItem(content)
+
+    #def hashfile(self, afile, hasher, blocksize=65536):
+
+    #    for block in iter(lambda: afile.read(blocksize), ''):
+    #        hasher.update(block)
+    #    return hasher.hexdigest()
 
     def doNothing(self):
         self.dirty = True

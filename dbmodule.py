@@ -3,9 +3,10 @@ from collections import OrderedDict
 
 class sqlitequery():
 
-    def __init__(self, moduleName):
+    def __init__(self, moduleName, database_path):
         self.con = None
         self.pathToDbFile = None # will be given when called
+        self.db_path = database_path
         if moduleName == 'pslist':
             self.moduleName = 'PSList'
         elif moduleName == 'psxview':
@@ -36,7 +37,7 @@ class sqlitequery():
 
     def getData(self):
             try:
-                con = lite.connect('/home/yary/git/yavol_qt/output.sqlite')
+                con = lite.connect(self.db_path)
                 cur = con.cursor()
                 cur.execute('SELECT * FROM ' + self.moduleName)
                 names = list(map(lambda x: x[0], cur.description))
@@ -67,3 +68,56 @@ class sqlitequery():
                 if con:
                     con.close()
             return data
+
+    def storeImageData(self, imgName, imgSize, imgPath, time):
+        try:
+            con = lite.connect(self.db_path)
+            cur = con.cursor()
+
+            #check if the file table exists
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='AnalysisFile'")
+            row = cur.fetchone()
+            if row:
+                print row
+            else:
+                cur.execute('''CREATE TABLE AnalysisFile(
+                            id  INTEGER,
+                            imgName TEXT,
+                            imgSize INTEGER,
+                            imgPath TEXT,
+                            imgLastProfile TEXT,
+                            dbCreated INTEGER,
+                            dbLastOpened INTEGER)''')
+                cur.execute('INSERT INTO AnalysisFile(id, imgName, imgSize, imgPath, imgLastProfile, dbCreated,\
+                            dbLastOpened) VALUES (?,?,?,?,?,?,?)', (1, imgName, imgSize, imgPath, '', time, time,))
+                con.commit()
+
+            #cur.execute('INSERT INTO FROM ' + self.moduleName)
+        except lite.Error, e:
+
+            print "Error %s:" % e.args[0]
+            pass
+
+        finally:
+
+            if con:
+                con.close()
+
+    def updateProfileInfo(self, imgLastProfile):
+
+        try:
+            con = lite.connect(self.db_path)
+            cur = con.cursor()
+
+            #check if the file table exists
+            cur.execute("UPDATE AnalysisFile SET imgLastProfile = ? WHERE id=1", (imgLastProfile,))
+            con.commit()
+        except lite.Error, e:
+
+            print "Error %s:" % e.args[0]
+            pass
+
+        finally:
+
+            if con:
+                con.close()
