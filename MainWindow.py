@@ -26,15 +26,7 @@ from shutil import copyfile
 
 from time import time
 
-from datetime import datetime
 
-#import hashlib  #hashfile fnc
-
-
-# TODO: do not run module more than once, just open the result from db
-# TODO: app crashes: run pslist, then pscan -> crash
-# I suspect the threads, one finish
-#
 # TODO: yarascan: there is one situation which needs to be handled properly (no hit)
 # TODO: ADD Open Analysis functionality:
 '''
@@ -51,13 +43,6 @@ def logger(func):
         return func(*args, **kwargs)
 
     return forward
-'''
-class ResultObj(QObject):
-    def __init__(self, moduleName, retValObj, volInstance):
-        self.moduleName = moduleName
-        self.retValObj = retValObj
-        self.volInstance = volInstance
-'''
 
 class ResultObj(QObject):
     def __init__(self, moduleName, retValObj):
@@ -126,9 +111,11 @@ class Window(QMainWindow):
         self.filename = None
         self.dir = None
         self.fullpath = None
+        self.file_size = 0
         self.output_path = "tmp/output.sqlite"
+        self.user_db_path = ""
         self.volatilityInstance = None
-        self.profile = "imageinfo"
+        self.profile = "Use Imageinfo"
         self.create_widgets()
         self.create_actions()
         self.settings = self.loadAppSettings()
@@ -161,11 +148,11 @@ class Window(QMainWindow):
         fileNewAction = self.createAction("&New Analysis", self.fileOpen,
                                           QKeySequence.New, "filenew", "Analyse an image file")
 
-        fileOpenAction = self.createAction("&Open Analysis", self.doNothing,
+        fileOpenAction = self.createAction("&Open Analysis", self.analysisOpen,
                                            QKeySequence.Open, "fileopen", "Restore previous analysis")
 
         fileSaveAction = self.createAction("&Save Analysis", partial(self.fileSave, False),
-                                           QKeySequence.Save, "filesave", "Restore previous analysis")
+                                           QKeySequence.Save, "filesave", "Save analysis")
 
         fileExitAction = self.createAction("&Exit", self.appExit,
                                            QKeySequence.Close, None, "Exit YaVol")
@@ -327,11 +314,16 @@ class Window(QMainWindow):
                 self.yarascan_queue_size = len(dialog.selected_rules)
                 for rule in dialog.selected_rules:
                     self.path_to_yara_rule = str(path_to_rules + '/' + rule + '.yar')
-                    pprint.pprint(self.path_to_yara_rule)
+                    #pprint.pprint(self.path_to_yara_rule)
                     self.actionModule('yarascan')
 
     def closeEvent(self, event):
         if self.okToContinue():
+
+            #delete temp db file (/tmp/output.sqlite)
+            if path.isfile('tmp/output.sqlite'):
+                remove('tmp/output.sqlite')
+
             # self.settings = QSettings()
             filename = (QVariant(QString(self.filename))
                         if self.filename is not None else QVariant())
@@ -367,17 +359,14 @@ class Window(QMainWindow):
         fname = unicode(QFileDialog.getOpenFileName(self, "YaVol - Choose Image", wdir,
                                                     "Memory files (%s)" % " ".join(formats)))
         if fname:
-            # self.loadFile(fname)
 
-            #calculate the hash
-            #md5 = self.hashfile(open(fname), hashlib.md5())
-            #print md5
-
-            #get current datetime
-            unix_time = int(time())
+            #check if we already got tmp file created (user opened something before)
+            if path.isfile('tmp/output.sqlite'):
+                remove('tmp/output.sqlite')
+                self.displayInLog("temp file deleted!")
 
             #get image file size
-            file_size = path.getsize(fname)
+            self.file_size = path.getsize(fname)
 
 
             self.filename = path.basename(fname)
@@ -385,38 +374,47 @@ class Window(QMainWindow):
             self.fullpath = fname
 
             #store image data
-            db = dbmodule.sqlitequery('fileOpen', self.output_path)
-            db.storeImageData(imgName=self.filename, imgSize=file_size, imgPath=self.dir, time=unix_time)
+            stored = self.storeImageData()
 
+            if stored:
+                self.displayInLog("storeImageData success")
+            else:
+                self.displayInLog("storeImageData failed")
 
-            fileNameLabel = QLabel("Image: ")
-            profileLabel = QLabel("Profile: ")
-            fileName = QLabel(self.filename)
-            self.profileSelector = QComboBox()
-            self.profileSelector.addItems(['Use Imageinfo', 'VistaSP0x64', 'VistaSP0x86',
-                                           'VistaSP1x64', 'VistaSP2x64', 'VistaSP2x86', 'Win2003SP0x86',
-                                           'Win2003SP1x64', 'Win2003SP1x86', 'Win2003SP2x64', 'Win2003SP2x86',
-                                           'Win2008R2SP0x64', 'Win2008R2SP1x64', 'Win2008SP1x64', 'Win2008SP1x86',
-                                           'Win2008SP2x64', 'Win7SP0x64', 'Win7SP0x86', 'Win7SP1x64', 'Win7SP1x86',
-                                           'WinXPSP1x64', 'WinXPSP2x64', 'WinXPSP2x86', 'WinXPSP3x86'])
+            self.showImageTab()
 
-            horizontalLayout = QHBoxLayout()
-            grid = QGridLayout()
-            grid.addWidget(fileNameLabel, 1, 0)
-            grid.addWidget(fileName, 1, 1)
-            grid.addWidget(profileLabel, 2, 0)
-            grid.addWidget(self.profileSelector, 2, 1)
-            spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-            grid.addItem(spacerItem)
-            horizontalLayout.addItem(grid)
-            horizontalLayout.addStretch()
-            # s.connect(w, SIGNAL("signalSignature"), functionName)
-            #                            SIGNAL("currentIndexChanged(const QString & text)", self.addContentToWidget(self.listWidget, "profile change")
-            # TODO: pridat akciu na zmenu v comboboxe ktora zapise do self.profile
-            self.connect(self.profileSelector, SIGNAL("currentIndexChanged(QString)"), self.storeProfile)
+    def analysisOpen(self):
 
-            self.addTabFnc("Image", horizontalLayout)
-            self.dirty = True
+        fname = unicode(QFileDialog.getOpenFileName(self, "YaVol - Choose analysis file", '',
+                                                    "Analysis files (*.sqlite)"))
+        if fname:
+            self.displayInLog("Opening db file: " + unicode(fname))
+            db = dbmodule.sqlitequery('getProfile', fname)
+            result = db.getProfileInfo()
+            if result:
+                #pprint.pprint(result)
+                #check if the memory file is still in the same location
+                image_full_path = result[3] + '/' + result[1]
+                print image_full_path
+                if path.isfile(image_full_path):
+                    #file is still there, set the variables filename, dir, fullpath
+                    self.filename = result[1]
+                    self.dir = result[3]
+                    self.fullpath = image_full_path
+                    # set the last used profile
+                    self.profile = result[4]
+                    # show image tab
+                    self.showImageTab()
+
+                    #copy sqlite file to the tmp folder
+                    copyfile(fname,self.output_path)
+                    self.dirty = False
+                else:
+                    # memory image file is no longer in the same location, show warning
+                    #TODO:user should be provided with an option to specify new path
+                    self.showWarningInfo('Image file not found', 'Memory image file was not found!')
+
+                print image_full_path
 
     def fileSave(self, exit):
 
@@ -446,6 +444,10 @@ class Window(QMainWindow):
                         copyfile(src, dst)
                         #changes were stored, unset the dirty flag
                         self.dirty = False
+
+                        #write to analysisFile
+
+
                         if exit:
                             remove(src)
                             #returning true to the caller (okToContinue) will cause exit
@@ -489,6 +491,14 @@ class Window(QMainWindow):
 
         db = dbmodule.sqlitequery('updateProfile', self.output_path)
         db.updateProfileInfo(self.profile)
+        self.dirty = True
+
+    def storeImageData(self):
+        #get current datetime
+        unix_time = int(time())
+        db = dbmodule.sqlitequery('fileOpen', self.output_path)
+        status = db.storeImageData(imgName=self.filename, imgSize=self.file_size, imgPath=self.dir, time=unix_time)
+        return status
 
     def handle_result(self, result):
         # this method is a callback which should
@@ -518,7 +528,13 @@ class Window(QMainWindow):
 
                 db = dbmodule.sqlitequery(moduleName, self.output_path)
                 data = db.getData()
-                self.addToTab(moduleName, 'tree', data)
+
+                #if there is no hit then returned dict looks like this:
+                #OrderedDict([('Rule', []), ('Owner', []), ('Address', []), ('Data', [])])
+                if data['Rule']:
+                    self.addToTab(moduleName, 'tree', data)
+                else:
+                    self.addToTab(moduleName, 'list', 'No hit!')
 
         else:   #output of the rest of the modules will be shown right away in a tab
             # textVal is used only with imageinfo module
@@ -563,23 +579,43 @@ class Window(QMainWindow):
                 self.displayInLog("Error: This module can't be use with this profile")
                 return False
 
-        self.status.showMessage("Creating %s output" % moduleName, 5000)
-        self.displayInLog("%s with a profile called!" % moduleName)
 
-        if self.volatilityInstance != None:
-            self.displayInLog("Info: Volatility instance found")
-            if self.path_to_yara_rule:
-                self.thread_process(self.volatilityInstance, moduleName, self.fullpath, self.profile,
-                                    self.path_to_yara_rule, self.output_path)
-            else:
-                self.thread_process(self.volatilityInstance, moduleName, self.fullpath, self.profile,
-                                    None, self.output_path)
+        # check if we got an open table with this module output
+        if moduleName != 'yarascan':
+            #print self.tabWidget.count()
+            for i in range(self.tabWidget.count()):
+                if self.tabWidget.tabText(i) == moduleName.lower():
+                    #set focus on the tab
+                    self.tabWidget.setCurrentIndex(i)
+                    return True
+
+        #check if our db already contains table with this module output
+        if self.checkForTable(moduleName) and moduleName != 'yarascan':
+            self.displayInLog("Info: We already have this module output in db!")
+            #get the data and display it
+            db = dbmodule.sqlitequery(moduleName, self.output_path)
+            data = db.getData()
+            self.addToTab(moduleName, 'table', data)
+
         else:
-            self.displayInLog("Info: Volatility instance missing!")
-            if self.path_to_yara_rule:
-                self.thread_process(None, moduleName, self.fullpath, self.profile, self.path_to_yara_rule, self.output_path)
+            #we dont have this output in our db
+            self.status.showMessage("Creating %s output" % moduleName, 5000)
+            self.displayInLog("%s with a profile called!" % moduleName)
+
+            if self.volatilityInstance != None:
+                self.displayInLog("Info: Volatility instance found")
+                if self.path_to_yara_rule:
+                    self.thread_process(self.volatilityInstance, moduleName, self.fullpath, self.profile,
+                                        self.path_to_yara_rule, self.output_path)
+                else:
+                    self.thread_process(self.volatilityInstance, moduleName, self.fullpath, self.profile,
+                                        None, self.output_path)
             else:
-                self.thread_process(None, moduleName, self.fullpath, self.profile, None, self.output_path)
+                self.displayInLog("Info: Volatility instance missing!")
+                if self.path_to_yara_rule:
+                    self.thread_process(None, moduleName, self.fullpath, self.profile, self.path_to_yara_rule, self.output_path)
+                else:
+                    self.thread_process(None, moduleName, self.fullpath, self.profile, None, self.output_path)
 
     def addTabFnc(self, name, layout):
         self.widget = QWidget()
@@ -627,6 +663,52 @@ class Window(QMainWindow):
         currentQWidget = self.tabWidget.widget(currentIndex)
         currentQWidget.deleteLater()
         self.tabWidget.removeTab(currentIndex)
+
+    def showImageTab(self):
+
+        items = ['Use Imageinfo', 'VistaSP0x64', 'VistaSP0x86', 'VistaSP1x64', 'VistaSP2x64', \
+                 'VistaSP2x86', 'Win2003SP0x86', 'Win2003SP1x64', 'Win2003SP1x86', 'Win2003SP2x64', \
+                 'Win2003SP2x86', 'Win2008R2SP0x64', 'Win2008R2SP1x64', 'Win2008SP1x64', 'Win2008SP1x86', \
+                 'Win2008SP2x64', 'Win7SP0x64', 'Win7SP0x86', 'Win7SP1x64', 'Win7SP1x86', 'WinXPSP1x64', \
+                 'WinXPSP2x64', 'WinXPSP2x86', 'WinXPSP3x86']
+
+        fileNameLabel = QLabel("Image: ")
+        profileLabel = QLabel("Profile: ")
+        fileName = QLabel(self.filename)
+        self.profileSelector = QComboBox()
+        self.profileSelector.addItems(items)
+
+        #
+        index = items.index(self.profile)
+
+        self.profileSelector.setCurrentIndex(index)
+        horizontalLayout = QHBoxLayout()
+        grid = QGridLayout()
+        grid.addWidget(fileNameLabel, 1, 0)
+        grid.addWidget(fileName, 1, 1)
+        grid.addWidget(profileLabel, 2, 0)
+        grid.addWidget(self.profileSelector, 2, 1)
+        spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        grid.addItem(spacerItem)
+        horizontalLayout.addItem(grid)
+        horizontalLayout.addStretch()
+        # s.connect(w, SIGNAL("signalSignature"), functionName)
+        #                            SIGNAL("currentIndexChanged(const QString & text)", self.addContentToWidget(self.listWidget, "profile change")
+        # TODO: pridat akciu na zmenu v comboboxe ktora zapise do self.profile
+        self.connect(self.profileSelector, SIGNAL("currentIndexChanged(QString)"), self.storeProfile)
+
+        self.addTabFnc("Image", horizontalLayout)
+        self.dirty = True
+
+    def checkForTable(self, tableName):
+        # This function will determine if we already got a module output in db
+        # input: tableName
+        # output: true/false
+        db = dbmodule.sqlitequery(tableName, self.output_path)
+        presence = db.checkForTable()
+        return presence
+
+
 
     def showAboutInfo(self):
         QMessageBox.about(self, "About yavol",

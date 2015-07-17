@@ -48,7 +48,7 @@ class VolatilityFunctions():
 
         profs = registry.get_plugin_classes(obj.Profile)
 
-        if self.profile != "imageinfo":
+        if self.profile != "Use Imageinfo":
             self.config.PROFILE = self.profile
         #else:
         #    raise ValueError, "Wrong image type (imageinfo)"
@@ -105,7 +105,7 @@ class VolatilityFunctions():
     def runModule(self, name):
         print self.profile
 
-        if self.profile == 'imageinfo':
+        if self.profile == 'Use Imageinfo':
             retValtxt = self.imageinfo()
 
             return retObj(True, retValtxt)

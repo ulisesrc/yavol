@@ -1,6 +1,7 @@
 import sqlite3 as lite
 from collections import OrderedDict
 
+
 class sqlitequery():
 
     def __init__(self, moduleName, database_path):
@@ -71,6 +72,7 @@ class sqlitequery():
 
     def storeImageData(self, imgName, imgSize, imgPath, time):
         try:
+            status = False
             con = lite.connect(self.db_path)
             cur = con.cursor()
 
@@ -91,17 +93,18 @@ class sqlitequery():
                 cur.execute('INSERT INTO AnalysisFile(id, imgName, imgSize, imgPath, imgLastProfile, dbCreated,\
                             dbLastOpened) VALUES (?,?,?,?,?,?,?)', (1, imgName, imgSize, imgPath, '', time, time,))
                 con.commit()
+                status = True
 
             #cur.execute('INSERT INTO FROM ' + self.moduleName)
         except lite.Error, e:
 
             print "Error %s:" % e.args[0]
-            pass
 
         finally:
 
             if con:
                 con.close()
+            return status
 
     def updateProfileInfo(self, imgLastProfile):
 
@@ -121,3 +124,50 @@ class sqlitequery():
 
             if con:
                 con.close()
+
+    def getProfileInfo(self):
+        try:
+            print(self.db_path)
+            con = lite.connect(self.db_path)
+            cur = con.cursor()
+
+            #check if the file table exists
+            cur.execute("SELECT * FROM AnalysisFile WHERE id=1")
+            row = cur.fetchone()
+            if row:
+                return row
+            else:
+                return False
+
+        except lite.Error, e:
+
+            print "Error %s:" % e.args[0]
+            pass
+
+        finally:
+
+            if con:
+                con.close()
+
+    def checkForTable(self):
+        try:
+            status = False
+            con = lite.connect(self.db_path)
+            cur = con.cursor()
+
+            #check if the file table exists
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (self.moduleName,))
+            row = cur.fetchone()
+            if row:
+                status = True
+            else:
+                status = False
+        except lite.Error, e:
+
+            print "Error %s:" % e.args[0]
+
+        finally:
+
+            if con:
+                con.close()
+            return status
