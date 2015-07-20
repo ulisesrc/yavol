@@ -1,5 +1,5 @@
 '''
-Yavol - GUI for volatility framework and yara scanner
+YaVol - GUI for volatility framework and yara scanner
 Copyright (C) 2015  Jaroslav Brtan
 
 This program is free software: you can redistribute it and/or modify
