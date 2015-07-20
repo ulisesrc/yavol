@@ -23,18 +23,15 @@ you need to have installed Python (2.7), PyQt4, and sqlite3
 
 
 -----------------
-## Licensing
+## 2. Licensing
 GPLv3 license, see `LICENSE.txt` for details.
 
 
-![Git to SVN comparison](https://confluence.atlassian.com/download/attachments/304578655/git-tutorial-basics-clone-repotorepocollaboration.png)
-
-Git's ability to communicate with remote repositories is the foundation of every Git-based collaboration workflow. To learn more about Git and Git workflows see, [Atlassian's Git site](https://www.atlassian.com/git/).
-
 
 - - -
-## SourceTree 
-Download, install and configure SourceTree. Source tree is Atlassian's Git GUI client and one of the most popular on the market. 
+## 3. Acknowledgements and Thanks 
+I would like to thank to my wife for tolerance an patience for my little projects. Also my thanks goes to all people who helped to overcome the learning curve. I don't know them, but google found them on StackExchange :)
+Hope I will find some other people here who would like to contribute to make this even better. 
  
 This section contains the following tasks: 
 
