@@ -3,7 +3,7 @@ __version__ = "1.0.0"
 
 from PyQt4.QtCore import (PYQT_VERSION_STR, QFile, QFileInfo, QSettings,
                           QString, QT_VERSION_STR, QTimer, QVariant, Qt)
-from PyQt4.QtCore import *
+from PyQt4.QtCore import QObject, QThread, pyqtSignal, SIGNAL, QCoreApplication
 from PyQt4.QtGui import *
 from os import remove, path
 
@@ -306,7 +306,7 @@ class Window(QMainWindow):
             #check if the returned array of signatures is empty
             #and run the scan
             #DEBUG
-            pprint.pprint(dialog.selected_rules)
+            #pprint.pprint(dialog.selected_rules)
 
             if len(dialog.selected_rules) > 0:
 
@@ -505,13 +505,6 @@ class Window(QMainWindow):
         # process the data from the worker thread
         moduleName = result.moduleName
 
-        # in case we have run a module for the first time
-        # worker thread will return handle to the volatility instance
-        # storing it we could save some time with the next run
-        #if not self.volatilityInstance:
-        #    if result.volInstance:
-        #        self.volatilityInstance = result.volInstance
-
         #if the result comes from yarascan,
         # 1) check if the value of the yara_scan_queue_size > 1
         # 1a) lower its size by one
@@ -547,11 +540,49 @@ class Window(QMainWindow):
                 # we need to get them
                 db = dbmodule.sqlitequery(moduleName, self.output_path)
                 data = db.getData()
-                self.addToTab(moduleName, 'table', data)
-                # pprint.pprint(data)
 
-    def yarascanParser(self):
-        print("yarascanParser called!")
+                #TODO: offsets are stored in decimal for pslist,psscan, psxview, dlllist, handles,netscan,svcan, malfind
+                #convert offsets from decimal to hexa
+                modified_data = self.convertOffsets(moduleName, data)
+
+                self.addToTab(moduleName, 'table', modified_data)
+
+
+    def convertOffsets(self, moduleName, data):
+
+        if moduleName == 'pslist':
+            offsets = data['Offset(V)']
+            self.listToHex(offsets)
+        elif moduleName == 'psscan':
+            offsets = data['Offset(P)']
+            self.listToHex(offsets)
+        elif moduleName == 'dlllist':
+            offsets = data['Base']
+            self.listToHex(offsets)
+        elif moduleName == 'handles':
+            offsets = data['Offset(V)']
+            self.listToHex(offsets)
+        elif moduleName == 'netscan':
+            offsets = data['Offset(P)']
+            self.listToHex(offsets)
+        elif moduleName == 'psxview':
+            offsets = data['Offset(P)']
+            self.listToHex(offsets)
+        elif moduleName == 'svcscan':
+            offsets = data['Offset']
+            self.listToHex(offsets)
+        #malfind will require some more work
+        elif moduleName == 'malfind':
+            offsets = data['Address']
+            self.listToHex(offsets)
+
+        return data
+
+    def listToHex(self, list):
+
+        for index, value in enumerate(list):
+                number = hex(int(value))
+                list[index] = number
 
     def thread_process(self, volinstance, moduleName, filename, profile, yara_rule_path, output_path):
         MAX_CORES = 2
@@ -595,7 +626,11 @@ class Window(QMainWindow):
             #get the data and display it
             db = dbmodule.sqlitequery(moduleName, self.output_path)
             data = db.getData()
-            self.addToTab(moduleName, 'table', data)
+
+            #convert offsets from dec to hex
+            modified_data = self.convertOffsets(moduleName, data)
+
+            self.addToTab(moduleName, 'table', modified_data)
 
         else:
             #we dont have this output in our db
