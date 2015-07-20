@@ -12,8 +12,8 @@ ____
 
 ### 1. Installation
 
-
-clone  
+Clone repo
+`git clone "changing sample.html"`
 
 -----------------
 ### Collaboration is the core of Git
