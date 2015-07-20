@@ -9,7 +9,9 @@ Choose either SourceTree, Atlassian's Git client, or the command line to learn s
 
 ### Use [SourceTree Atlassian's Git client](#markdown-header-sourcetree) for Windows and Mac
 
-![Looking at the repository in SourceTree](https://confluence.atlassian.com/download/attachments/304578655/sourcetree-gui-small.png)
+![Looking at the repository in SourceTree](http://i57.tinypic.com/27y7art.png)
+
+![Looking at the repository in SourceTree](http://i60.tinypic.com/2dv79z9.png)
 
 ### Use [Git from the command line](#markdown-header-command-line) for Windows, Mac, and Linux
 
