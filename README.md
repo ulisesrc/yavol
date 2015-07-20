@@ -13,7 +13,8 @@ ____
 ### 1. Installation
 
 Clone repo
-`git clone https://Ft44k@bitbucket.org/Ft44k/yavol.git`
+
+* `git clone https://Ft44k@bitbucket.org/Ft44k/yavol.git`
 
 -----------------
 ### Collaboration is the core of Git
