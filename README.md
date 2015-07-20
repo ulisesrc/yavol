@@ -13,7 +13,7 @@ ____
 ### 1. Installation
 
 
-**Finally**, if you want a complete end to end tutorial: See our [Bitbucket 101](https://confluence.atlassian.com/x/cgozDQ). 
+clone  
 
 -----------------
 ### Collaboration is the core of Git
