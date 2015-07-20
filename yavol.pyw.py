@@ -24,6 +24,7 @@ import MainWindow
 
 #--------------------------------------------------------------------------------
 # TODO: indicate to the user that a module is still running (spinning wheel,...)
+# TODO: clean the code of the volatility instance variable usage
 # TODO: add a view option that will enable to switch visibility of the logdock window
 # TODO: fix issue with the enumfunc module malfunction
 # TODO: fix bug when more than one yara rule is used for scanning and at least one is with no hit (display it properly in treewindow)

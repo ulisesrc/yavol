@@ -684,12 +684,8 @@ class Window(QMainWindow):
     def addToTab(self, tabName, type, content):
         tabLayout = QHBoxLayout()
         if type == 'list':
-            #listWidget = QListWidget()
             textEditWidget = QTextEdit()
-            #item = QListWidgetItem(content)
             textEditWidget.insertPlainText(content)
-            #listWidget.addItem(item)
-            #tabLayout.addWidget(listWidget)
             textEditWidget.setReadOnly(True)
             tabLayout.addWidget(textEditWidget)
 
@@ -750,11 +746,8 @@ class Window(QMainWindow):
         grid.addItem(spacerItem)
         horizontalLayout.addItem(grid)
         horizontalLayout.addStretch()
-        # s.connect(w, SIGNAL("signalSignature"), functionName)
-        #                            SIGNAL("currentIndexChanged(const QString & text)", self.addContentToWidget(self.listWidget, "profile change")
-        # TODO: pridat akciu na zmenu v comboboxe ktora zapise do self.profile
-        self.connect(self.profileSelector, SIGNAL("currentIndexChanged(QString)"), self.storeProfile)
 
+        self.connect(self.profileSelector, SIGNAL("currentIndexChanged(QString)"), self.storeProfile)
         self.addTabFnc("Image", horizontalLayout)
         self.dirty = True
 
