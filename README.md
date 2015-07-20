@@ -24,7 +24,7 @@ you need to have installed Python (2.7), PyQt4, and sqlite3
 
 -----------------
 ## Licensing
-GPLv3 license, see `license.txt`
+GPLv3 license, see `LICENSE.txt` for details.
 
 
 ![Git to SVN comparison](https://confluence.atlassian.com/download/attachments/304578655/git-tutorial-basics-clone-repotorepocollaboration.png)
