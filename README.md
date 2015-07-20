@@ -30,5 +30,5 @@ GPLv3 license, see `LICENSE.txt` for details.
 
 - - -
 ## 3. Acknowledgements and Thanks 
-I would like to thank to my wife for tolerance an patience for my little projects. Also my thanks goes to all people who helped to overcome the learning curve. I don't know them, but google found them on StackExchange :)
+I would like to thank to my wife for tolerance an patience for my little projects. Also my thanks goes to all people who helped me to overcome the learning curve. I don't know them, but google found them on StackExchange :)
 Hope I will find some other people here who would like to contribute to make this small utility even better.
