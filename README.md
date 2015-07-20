@@ -5,24 +5,27 @@ Results are stored in sqlite db for reuse.
 
 ____
 
-### Screenshots:
+## Screenshots:
 
 ![Pslist module output](http://i57.tinypic.com/27y7art.png)
 
 ![yara scanner output](http://i60.tinypic.com/2dv79z9.png)
 
-### 1. Installation
+## 1. Installation
 
 Clone repo
 
 * `git clone https://Ft44k@bitbucket.org/Ft44k/yavol.git`
+* default forder for yara sigs is /yara_rules
 
-## 1.1 Prerequisites
+### 1.1 Prerequisites
+you need to have installed Python (2.7), PyQt4, and sqlite3
 
 
 -----------------
-### Collaboration is the core of Git
-Unlike SVN, Git makes no distinction between the working copy and the central repository—they are all full-fledged Git repositories.
+## Licensing
+GPLv3 license, see `license.txt`
+
 
 ![Git to SVN comparison](https://confluence.atlassian.com/download/attachments/304578655/git-tutorial-basics-clone-repotorepocollaboration.png)
 
