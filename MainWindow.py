@@ -544,8 +544,14 @@ class Window(QMainWindow):
                 #OrderedDict([('Rule', []), ('Owner', []), ('Address', []), ('Data', [])])
                 if data['Rule']:
                     self.addToTab(moduleName, 'tree', data)
+                    #TODO: maybe we would like to store previous scan results..
+                    # drop the yarascan table
+                    db.dropYaraScanTable('YaraScan')
+
                 else:
                     self.addToTab(moduleName, 'list', 'No hit!')
+
+
 
         else:   #output of the rest of the modules will be shown right away in a tab
             # textVal is used only with imageinfo module

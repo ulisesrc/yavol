@@ -189,3 +189,23 @@ class sqlitequery():
             if con:
                 con.close()
             return status
+
+    def dropYaraScanTable(self, tableName):
+
+        try:
+            con = lite.connect(self.db_path)
+            cur = con.cursor()
+
+            #check if the file table exists
+            cur.execute("DROP TABLE IF EXISTS YaraScan")
+            con.commit()
+
+        except lite.Error, e:
+
+            print "Error %s:" % e.args[0]
+
+        finally:
+
+            if con:
+                con.close()
+
