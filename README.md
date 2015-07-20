@@ -1,6 +1,7 @@
 YaVol - GUI for volatility framework and yara
 ================
 This is just another GUI for [volatility](https://code.google.com/p/volatility/wiki/VolatilityIntroduction) and [yara](http://plusvic.github.io/yara/) which could make someone's life easier. It is inteded for Incident responders for quick examination of a memory image.
+Results are stored in sqlite db for reuse.
 
 ____
 
@@ -15,6 +16,9 @@ ____
 Clone repo
 
 * `git clone https://Ft44k@bitbucket.org/Ft44k/yavol.git`
+
+## 1.1 Prerequisites
+
 
 -----------------
 ### Collaboration is the core of Git
