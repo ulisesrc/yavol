@@ -1,53 +1,34 @@
-__author__ = 'Jaroslav Brtan'
+'''
+Yavol - GUI for volatility framework and yara scanner
+Copyright (C) 2015  Jaroslav Brtan
 
-#--------------------------------------------------------------------------------
-#TODO:
-#
-# [APP]
-# !!! osetrit situaciu ked je profil nastaveny na imageinfo
-# -> query db for result of worker thread!!!
-# - output of modules to sqlite
-# --> some modules needs additional parameters like pid
-# https://github.com/JamesHabben/evolve/blob/master/evolve.py;
-# - add dialog window for modules that need additional parameters (printkey,...)
-# - add ldrmodules to the malware section
-#   https://github.com/volatilityfoundation/volatility/wiki/Command-Reference
-# - if an image session is open, force user to close previous session before opening
-#   a new image file (show dialog if current session should be closed/saved...)
-# - add search dialog (ctrl+f search on active tab)
-# - rules viewer/editor
-# - do not open redundant tabs (like two similar pslists),
-#   just change the active tcd ~`ab to the one requested
-# - add possibility to store/restore analysis sessions
-#   => store into a local db (sqlite,...)
-# - settings.yalm for app setting
-#   => where sigs, plugins are located
-#   => remember last opened folder
-#   => root window geometry
-# - Use tkintertable for output of the volatility
-#   data will be put into tables, sortable
-#
-# [YARA]
-# - add a test rule for vawtrack
-# - scan only:
-#   kernel/user/pid
-# - scan with:
-#   all sigs/only selected/family
-#
-# [VOLATILITY]
-# - plugin similar to malfind that will look for known bad habits
-#   like process with known name running from unusual location
-#   processes running from temp
-#   injected processes
-#--------------------------------------------------------------------------------
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+'''
 
 
 import sys
 from PyQt4.QtGui import QApplication, QIcon
 import MainWindow
-import resources
+
+
+#--------------------------------------------------------------------------------
+# TODO: indicate to the user that a module is still running (spinning wheel,...)
+# TODO: add a view option that will enable to swtich visibility of the logdock window
+# TODO: add icons for new analysis; open analysis, save analysis operations to the menu bar
+# TODO: fix issue with the enumfunc module malfunction
+# TODO: fix bug when more than one yara rule is used for scanning and at least one is with no hit (display it properly in treewindow)
+#--------------------------------------------------------------------------------
 
 
 

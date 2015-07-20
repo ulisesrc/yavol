@@ -1,11 +1,31 @@
-__author__ = "Jaroslav Brtan"
-__version__ = "1.0.0"
+__author__ = 'Jaroslav Brtan'
+__version__ = '0.0.1'
+
+'''
+Yavol - GUI for volatility framework and yara scanner
+Copyright (C) 2015  Jaroslav Brtan
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+'''
 
 from PyQt4.QtCore import (PYQT_VERSION_STR, QFile, QFileInfo, QSettings,
                           QString, QT_VERSION_STR, QTimer, QVariant, Qt)
 from PyQt4.QtCore import QObject, QThread, pyqtSignal, SIGNAL, QCoreApplication
 from PyQt4.QtGui import *
 from os import remove, path
+
+import resources
 
 from functools import partial
 
@@ -25,16 +45,6 @@ import yarascanTreeView
 from shutil import copyfile
 
 from time import time
-
-
-# TODO: yarascan: there is one situation which needs to be handled properly (no hit)
-# TODO: ADD Open Analysis functionality:
-'''
-- check if the file is still there
-- set the profile to the last used value
-- check the tables and offer displaying the results
-
-'''
 
 
 def logger(func):
@@ -102,7 +112,6 @@ class Worker(QThread):
 class Window(QMainWindow):
     def __init__(self, parent=None):
         super(Window, self).__init__(parent)
-        # self.thread = Worker()
         self.tabWidget = QTabWidget()
         self.tabWidget.setTabsClosable(True)
         self.tabWidget.tabCloseRequested.connect(self.closeTab)
@@ -122,7 +131,6 @@ class Window(QMainWindow):
         self.setWindowTitle("YaVol")
         # self.updateFileMenu()
         self.imageinfoShown = False
-        # self.connect(self.thread, SIGNAL("output()"), self.threadDone)
         self.path_to_yara_rule = None
         self.yarascan_queue_size = 0  #used to determine when we finished scanning
 
@@ -243,7 +251,7 @@ class Window(QMainWindow):
         # toolbar
         fileToolbar = self.addToolBar("File")
         fileToolbar.setObjectName("FileToolBar")
-        self.addActions(fileToolbar, (fileNewAction,))
+        self.addActions(fileToolbar, (fileNewAction, fileOpenAction, fileSaveAction,))
 
     def createAction(self, text, slot=None, shortcut=None, icon=None,
                      tip=None, checkable=False, signal="triggered()"):
@@ -742,8 +750,6 @@ class Window(QMainWindow):
         db = dbmodule.sqlitequery(tableName, self.output_path)
         presence = db.checkForTable()
         return presence
-
-
 
     def showAboutInfo(self):
         QMessageBox.about(self, "About yavol",
