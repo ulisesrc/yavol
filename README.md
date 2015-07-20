@@ -1,11 +1,8 @@
 YaVol - GUI for volatility framework and yara
 ================
-This is just another GUI for volatility and yara apps which could make someone's life easier. It is inteded for Incident responders for quick examination of a memory image.
+This is just another GUI for [volatility](https://code.google.com/p/volatility/wiki/VolatilityIntroduction) and [yara](http://plusvic.github.io/yara/) which could make someone's life easier. It is inteded for Incident responders for quick examination of a memory image.
 
 ____
-
-## Start here
-Choose either SourceTree, Atlassian's Git client, or the command line to learn source control using Bitbucket and Git. 
 
 ### Screenshots:
 
@@ -13,7 +10,7 @@ Choose either SourceTree, Atlassian's Git client, or the command line to learn s
 
 ![yara scanner output](http://i60.tinypic.com/2dv79z9.png)
 
-### Use [Git from the command line](#markdown-header-command-line) for Windows, Mac, and Linux
+### 1. Installation
 
 
 **Finally**, if you want a complete end to end tutorial: See our [Bitbucket 101](https://confluence.atlassian.com/x/cgozDQ). 
