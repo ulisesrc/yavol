@@ -19,10 +19,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PyQt4.QtCore import (PYQT_VERSION_STR, QFile, QFileInfo, QSettings,
-                          QString, QT_VERSION_STR, QTimer, QVariant, Qt)
-from PyQt4.QtCore import QObject, QThread, pyqtSignal, SIGNAL, QCoreApplication
-from PyQt4.QtGui import *
+from PyQt4.QtCore import QObject, QThread, pyqtSignal, SIGNAL, QCoreApplication, QString, QVariant, \
+                            QSettings, Qt
+from PyQt4.QtGui import QMainWindow, QTabWidget, QDockWidget, QListWidget, QLabel, QFrame, QKeySequence, \
+                        QWidget, QAction, QIcon, QFileDialog, QMessageBox, QHBoxLayout, QTextEdit, QTableWidget, \
+                        QComboBox, QTableWidgetItem, QAbstractItemView, QGridLayout, QSpacerItem, QSizePolicy
+
 from os import remove, path
 
 import resources
@@ -304,26 +306,33 @@ class Window(QMainWindow):
             pass
 
     def showYaraScanDialog(self):
-        #TODO: create a method that will return particular values from the QSettings object
-        settings = QSettings()
-        settings_dict = settings.value('dictionary').toPyObject()
 
-        path_to_rules = settings_dict[QString('yara')][QString('rules_dir')][QString('path')]
-        dialog = yarascanDlg.yarascanDlg(path_to_rules)
-        if dialog.exec_():
-            #check if the returned array of signatures is empty
-            #and run the scan
-            #DEBUG
-            #pprint.pprint(dialog.selected_rules)
+        #check if we got a memory image file opened
+        if self.filename:
 
-            if len(dialog.selected_rules) > 0:
+            #TODO: create a method that will return particular values from the QSettings object
+            settings = QSettings()
+            settings_dict = settings.value('dictionary').toPyObject()
 
-                self.volatilityInstance = None  #test
-                self.yarascan_queue_size = len(dialog.selected_rules)
-                for rule in dialog.selected_rules:
-                    self.path_to_yara_rule = str(path_to_rules + '/' + rule + '.yar')
-                    #pprint.pprint(self.path_to_yara_rule)
-                    self.actionModule('yarascan')
+            path_to_rules = settings_dict[QString('yara')][QString('rules_dir')][QString('path')]
+            dialog = yarascanDlg.yarascanDlg(path_to_rules)
+            if dialog.exec_():
+                #check if the returned array of signatures is empty
+                #and run the scan
+                #DEBUG
+                #pprint.pprint(dialog.selected_rules)
+
+                if len(dialog.selected_rules) > 0:
+
+                    self.volatilityInstance = None  #test
+                    self.yarascan_queue_size = len(dialog.selected_rules)
+                    for rule in dialog.selected_rules:
+                        self.path_to_yara_rule = str(path_to_rules + '/' + rule + '.yar')
+                        #pprint.pprint(self.path_to_yara_rule)
+                        self.actionModule('yarascan')
+        else:
+            #we dont have a memory image file opened
+            self.showWarningInfo('Cannot process', 'No image file specified\n Open a memory image file first.')
 
     def closeEvent(self, event):
         if self.okToContinue():
@@ -403,7 +412,7 @@ class Window(QMainWindow):
                 #pprint.pprint(result)
                 #check if the memory file is still in the same location
                 image_full_path = result[3] + '/' + result[1]
-                print image_full_path
+                #print image_full_path
                 if path.isfile(image_full_path):
                     #file is still there, set the variables filename, dir, fullpath
                     self.filename = result[1]
@@ -422,7 +431,7 @@ class Window(QMainWindow):
                     #TODO:user should be provided with an option to specify new path
                     self.showWarningInfo('Image file not found', 'Memory image file was not found!')
 
-                print image_full_path
+                #print image_full_path
 
     def fileSave(self, exit):
 
@@ -448,7 +457,7 @@ class Window(QMainWindow):
                         dst = strFileName + '.sqlite'
 
                     try:
-                        print dst
+                        #print dst
                         copyfile(src, dst)
                         #changes were stored, unset the dirty flag
                         self.dirty = False
@@ -479,7 +488,8 @@ class Window(QMainWindow):
         if self.dirty == False:
 
             #clean the temp folder
-            remove('tmp/output.sqlite')
+            if path.isfile('tmp/output.sqlite'):
+                remove('tmp/output.sqlite')
             #and quit
             QCoreApplication.instance().quit()
         else:
@@ -555,7 +565,6 @@ class Window(QMainWindow):
 
                 self.addToTab(moduleName, 'table', modified_data)
 
-
     def convertOffsets(self, moduleName, data):
 
         if moduleName == 'pslist':
@@ -610,55 +619,61 @@ class Window(QMainWindow):
 
     def actionModule(self, moduleName):
 
-        # check if the selected image profile supports this module
-        compatibilityCheck = re.match('Vista|Win2008|Win7', self.profile, flags=0)
+        #check if we got a memory image file specified first
+        if self.filename:
 
-        if moduleName in ['connections', 'connscan', 'sockscan', 'sockets']:
-            if compatibilityCheck:
-                self.displayInLog("Error: This module can't be use with this profile")
-                return False
+            # check if the selected image profile supports this module
+            compatibilityCheck = re.match('Vista|Win2008|Win7', self.profile, flags=0)
+
+            if moduleName in ['connections', 'connscan', 'sockscan', 'sockets']:
+                if compatibilityCheck:
+                    self.displayInLog("Error: This module can't be use with this profile")
+                    return False
 
 
-        # check if we got an open table with this module output
-        if moduleName != 'yarascan':
-            #print self.tabWidget.count()
-            for i in range(self.tabWidget.count()):
-                if self.tabWidget.tabText(i) == moduleName.lower():
-                    #set focus on the tab
-                    self.tabWidget.setCurrentIndex(i)
-                    return True
+            # check if we got an open table with this module output
+            if moduleName != 'yarascan':
+                #print self.tabWidget.count()
+                for i in range(self.tabWidget.count()):
+                    if self.tabWidget.tabText(i) == moduleName.lower():
+                        #set focus on the tab
+                        self.tabWidget.setCurrentIndex(i)
+                        return True
 
-        #check if our db already contains table with this module output
-        if self.checkForTable(moduleName) and moduleName != 'yarascan':
-            self.displayInLog("Info: We already have this module output in db!")
-            #get the data and display it
-            db = dbmodule.sqlitequery(moduleName, self.output_path)
-            data = db.getData()
+            #check if our db already contains table with this module output
+            if self.checkForTable(moduleName) and moduleName != 'yarascan':
+                self.displayInLog("Info: We already have this module output in db!")
+                #get the data and display it
+                db = dbmodule.sqlitequery(moduleName, self.output_path)
+                data = db.getData()
 
-            #convert offsets from dec to hex
-            modified_data = self.convertOffsets(moduleName, data)
+                #convert offsets from dec to hex
+                modified_data = self.convertOffsets(moduleName, data)
 
-            self.addToTab(moduleName, 'table', modified_data)
+                self.addToTab(moduleName, 'table', modified_data)
 
-        else:
-            #we dont have this output in our db
-            self.status.showMessage("Creating %s output" % moduleName, 5000)
-            self.displayInLog("%s with a profile called!" % moduleName)
-
-            if self.volatilityInstance != None:
-                self.displayInLog("Info: Volatility instance found")
-                if self.path_to_yara_rule:
-                    self.thread_process(self.volatilityInstance, moduleName, self.fullpath, self.profile,
-                                        self.path_to_yara_rule, self.output_path)
-                else:
-                    self.thread_process(self.volatilityInstance, moduleName, self.fullpath, self.profile,
-                                        None, self.output_path)
             else:
-                self.displayInLog("Info: Volatility instance missing!")
-                if self.path_to_yara_rule:
-                    self.thread_process(None, moduleName, self.fullpath, self.profile, self.path_to_yara_rule, self.output_path)
+                #we dont have this output in our db
+                self.status.showMessage("Creating %s output" % moduleName, 5000)
+                self.displayInLog("%s with a profile called!" % moduleName)
+
+                if self.volatilityInstance != None:
+                    self.displayInLog("Info: Volatility instance found")
+                    if self.path_to_yara_rule:
+                        self.thread_process(self.volatilityInstance, moduleName, self.fullpath, self.profile,
+                                            self.path_to_yara_rule, self.output_path)
+                    else:
+                        self.thread_process(self.volatilityInstance, moduleName, self.fullpath, self.profile,
+                                            None, self.output_path)
                 else:
-                    self.thread_process(None, moduleName, self.fullpath, self.profile, None, self.output_path)
+                    self.displayInLog("Info: Volatility instance missing!")
+                    if self.path_to_yara_rule:
+                        self.thread_process(None, moduleName, self.fullpath, self.profile, self.path_to_yara_rule, self.output_path)
+                    else:
+                        self.thread_process(None, moduleName, self.fullpath, self.profile, None, self.output_path)
+        else:
+            # we dont have an image file opened
+            self.showWarningInfo('Cannot process', 'No image file specified\n Open a memory image file first.')
 
     def addTabFnc(self, name, layout):
         self.widget = QWidget()

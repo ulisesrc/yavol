@@ -70,21 +70,11 @@ class VolatilityFunctions():
 
         if self.profile != "Use Imageinfo":
             self.config.PROFILE = self.profile
-        #else:
-        #    raise ValueError, "Wrong image type (imageinfo)"
-        #self.config.LOCATION = "file:///" + self.path
         self.config.LOCATION = 'file://' + self.path
-        #self.config.OUTPUT_FILE = args.file + '.sqlite'
-
         self.config.OUTPUT = 'sqlite'
         self.config.OUTPUT_FILE = output_path
-        #self.config.output_file = "file:///home/yary/git/yavol_qt/yavol.sqlite"
-        #self.config.YARA_FILE = config.yara_sigs
         self.config.parse_options(False)
         self.config.YARA_FILE = yara_rules_path
-
-        #profile = profs[self.config.PROFILE]()
-
 
 
     def imageinfo(self):
@@ -95,24 +85,9 @@ class VolatilityFunctions():
         info_list = info_table.getvalue()
         return info_list
 
-    '''
-    def dlllist(self):
-        self.config.NAME = 'explore'
-
-        dll = taskmods.DllList(self.config)
-        dlltable = StringIO()
-        dlldata = dll.calculate()
-        dll.render_text(dlltable, dlldata)
-        dlllist = dlltable.getvalue()
-
-        # clean config
-        self.config.NAME = None
-
-        return dlllist
-    '''
 
     def mlwr_yarascan(self):
-        #self.config.YARA_FILE = '/home/yary/git/yavol_qt/yara_rules/ye_memory.yar'
+
         mlwr = malfind.YaraScan(self.config)
         mlwr_table = StringIO()
         mlwr_data = mlwr.calculate()
@@ -123,21 +98,12 @@ class VolatilityFunctions():
 
     @logger
     def runModule(self, name):
-        print self.profile
+        #print self.profile
 
         if self.profile == 'Use Imageinfo':
             retValtxt = self.imageinfo()
 
             return retObj(True, retValtxt)
-
-        #elif name == 'yarascan':
-
-        #    retValtxt = self.mlwr_yarascan()
-
-        #    if not retValtxt: # when there is no hit, we will have an empty string here
-        #        retValtxt = 'No hits!'
-
-        #    return retObj(True, retValtxt)
 
         else:
             cmds = registry.get_plugin_classes(commands.Command, lower = True)
@@ -146,7 +112,7 @@ class VolatilityFunctions():
             try:
                 calc = command.calculate()
                 command.render_sqlite(self.config.OUTPUT_FILE, calc)
-                #self.finished.emit()
+
                 return retObj(True, None)
 
             except Exception as err:

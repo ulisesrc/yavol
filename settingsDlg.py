@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import pprint
 
 
-from PyQt4.QtCore import *
+from PyQt4.QtCore import Qt, QSettings, QString
 from PyQt4.QtGui import QDialog, QLabel, QVBoxLayout, QHBoxLayout, QGridLayout, QBoxLayout, \
     QListWidget, QListWidgetItem, QFrame, QLineEdit, QDialogButtonBox
 
