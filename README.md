@@ -7,11 +7,11 @@ ____
 ## Start here
 Choose either SourceTree, Atlassian's Git client, or the command line to learn source control using Bitbucket and Git. 
 
-### Use [SourceTree Atlassian's Git client](#markdown-header-sourcetree) for Windows and Mac
+### Screenshots:
 
-![Looking at the repository in SourceTree](http://i57.tinypic.com/27y7art.png)
+![Pslist module output](http://i57.tinypic.com/27y7art.png)
 
-![Looking at the repository in SourceTree](http://i60.tinypic.com/2dv79z9.png)
+![yara scanner output](http://i60.tinypic.com/2dv79z9.png)
 
 ### Use [Git from the command line](#markdown-header-command-line) for Windows, Mac, and Linux
 
