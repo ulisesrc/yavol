@@ -23,7 +23,8 @@ from PyQt4.QtCore import QObject, QThread, pyqtSignal, SIGNAL, QCoreApplication,
                             QSettings, Qt
 from PyQt4.QtGui import QMainWindow, QTabWidget, QDockWidget, QListWidget, QLabel, QFrame, QKeySequence, \
                         QWidget, QAction, QIcon, QFileDialog, QMessageBox, QHBoxLayout, QTextEdit, QTableWidget, \
-                        QComboBox, QTableWidgetItem, QAbstractItemView, QGridLayout, QSpacerItem, QSizePolicy
+                        QComboBox, QTableWidgetItem, QAbstractItemView, QGridLayout, QSpacerItem, QSizePolicy, \
+                        QMenu, QApplication
 
 from os import remove, path
 
@@ -110,6 +111,38 @@ class Worker(QThread):
 
         #self.finished.emit(ResultObj(moduleName, retObj, volatilityInstance))
         self.finished.emit(ResultObj(moduleName, retObj))
+
+class TableWidget(QTableWidget):
+
+    def __init__(self, data, *args):
+        QTableWidget.__init__(self, *args)
+        self.data = data
+        self.setmydata()
+        self.resizeColumnsToContents()
+        self.resizeRowsToContents()
+
+    def setmydata(self):
+
+        horHeaders = []
+        for n, key in enumerate(self.data.keys()):
+            horHeaders.append(key)
+            for m, item in enumerate(self.data[key]):
+                newitem = QTableWidgetItem(item)
+                self.setItem(m, n, newitem)
+        self.setHorizontalHeaderLabels(horHeaders)
+        self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+
+    def contextMenuEvent(self, event):
+
+        menu = QMenu(self)
+        clipboardAction = menu.addAction("Copy to clipboard")
+        action = menu.exec_(self.mapToGlobal(event.pos()))
+        if action == clipboardAction:
+            cb = QApplication.clipboard()
+            cb.clear(mode=cb.Clipboard )
+
+            for item in self.selectedItems():
+                cb.setText(item.text(), mode=cb.Clipboard)
 
 class Window(QMainWindow):
     def __init__(self, parent=None):
@@ -704,16 +737,9 @@ class Window(QMainWindow):
             # number of columns depends on number of keys in dict
             num_of_columns = len(content)
             num_of_rows = len(content[content.keys()[0]])
-            tableWidget = QTableWidget(num_of_rows, num_of_columns)
+            #tableWidget = QTableWidget(num_of_rows, num_of_columns)
 
-            horHeaders = []
-            for n, key in enumerate(content.keys()):
-                horHeaders.append(key)
-                for m, item in enumerate(content[key]):
-                    newitem = QTableWidgetItem(item)
-                    tableWidget.setItem(m, n, newitem)
-            tableWidget.setHorizontalHeaderLabels(horHeaders)
-            tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers) # disable editing items in table
+            tableWidget = TableWidget(content, num_of_rows, num_of_columns)
             tabLayout.addWidget(tableWidget)
 
         self.addTabFnc(tabName, tabLayout)
