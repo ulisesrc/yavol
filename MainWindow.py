@@ -36,6 +36,8 @@ import re
 
 import Queue as queue
 
+import webbrowser
+
 import volmodule
 
 import pprint
@@ -136,6 +138,7 @@ class TableWidget(QTableWidget):
 
         menu = QMenu(self)
         clipboardAction = menu.addAction("Copy to clipboard")
+        googleSearchAction = menu.addAction("Search with Google")
         action = menu.exec_(self.mapToGlobal(event.pos()))
         if action == clipboardAction:
             cb = QApplication.clipboard()
@@ -143,6 +146,11 @@ class TableWidget(QTableWidget):
 
             for item in self.selectedItems():
                 cb.setText(item.text(), mode=cb.Clipboard)
+        if action == googleSearchAction:
+            items = self.selectedItems()
+            search_string = "https://www.google.com/search?q=" + items[0].text()
+            webbrowser.open(search_string)
+
 
 class Window(QMainWindow):
     def __init__(self, parent=None):
