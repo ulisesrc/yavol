@@ -32,7 +32,7 @@ class settingsDlg(QDialog):
         self.settings = settings
         self.create_widgets()
         self.layout_widgets()
-        self.fooSettingFrame.hide()
+        self.dump_dirSettingFrame.hide()
         self.barSettingFrame.hide()
 
         self.create_connections()
@@ -43,9 +43,6 @@ class settingsDlg(QDialog):
 
     def create_widgets(self):
 
-        #self.OkButton = QPushButton("OK")
-        #self.ApplyButton = QPushButton("Apply")
-        #self.CancelButton = QPushButton("Cancel")
         self.TableLabel1 = QLabel("Settings")
         self.ListOfSettings = QListWidget()
         self.buttonBox = QDialogButtonBox(QDialogButtonBox.Apply |
@@ -53,13 +50,14 @@ class settingsDlg(QDialog):
         self.buttonBox.layout().setDirection(QBoxLayout.RightToLeft)
         #yara scan settings frame
         self.yaraSettingFrame = QFrame()
-        self.fooSettingFrame = QFrame()
+        self.dump_dirSettingFrame = QFrame()
         self.barSettingFrame = QFrame()
 
         self.labelRulesPath = QLabel('Path to YARA rules:')
         self.inputRulesPath = QLineEdit()
 
-        self.labelFoo = QLabel('Just FOO as usual')
+        self.labelFoo = QLabel('Path to dumps:')
+        self.inputDumpDirPath = QLineEdit()
         self.labelBar = QLabel('Just BAR as usual')
 
 
@@ -75,31 +73,27 @@ class settingsDlg(QDialog):
 
         #yara setting frame layout
         frameLayout = QGridLayout()
-        frameLayout.addWidget(self.labelRulesPath,0, 0)
-        frameLayout.addWidget(self.inputRulesPath,0, 1)
+        frameLayout.addWidget(self.labelRulesPath, 0, 0)
+        frameLayout.addWidget(self.inputRulesPath, 0, 1)
         self.yaraSettingFrame.setLayout(frameLayout)
 
         #foo settings frame
-        frameLayoutFoo = QVBoxLayout()
-        frameLayoutFoo.addWidget(self.labelFoo)
-        self.fooSettingFrame.setLayout(frameLayoutFoo)
+        frameLayoutFoo = QGridLayout()
+        frameLayoutFoo.addWidget(self.labelFoo, 0, 0)
+        frameLayoutFoo.addWidget(self.inputDumpDirPath, 0, 1)
+        self.dump_dirSettingFrame.setLayout(frameLayoutFoo)
 
         #bar settings frame
         frameLayoutBar = QVBoxLayout()
         frameLayoutBar.addWidget(self.labelBar)
         self.barSettingFrame.setLayout(frameLayoutBar)
 
-        #vLayoutSettingsRight = QVBoxLayout()
-        #vLayoutSettingsRight.addLayout(gLayoutSettingsRight)
-
-
-
 
         settingWindowsLayout = QGridLayout()
 
         settingWindowsLayout.addLayout(vLayoutSettingsLeft, 0, 0)
         settingWindowsLayout.addWidget(self.yaraSettingFrame, 0, 1)
-        settingWindowsLayout.addWidget(self.fooSettingFrame, 0, 1)
+        settingWindowsLayout.addWidget(self.dump_dirSettingFrame, 0, 1)
         settingWindowsLayout.addWidget(self.barSettingFrame, 0, 1)
         settingWindowsLayout.addLayout(hLayoutButton, 1, 0)
 
@@ -115,19 +109,12 @@ class settingsDlg(QDialog):
 
         '''
 
-
-
-        #layout = QVBoxLayout()
-        #layout.addWidget(self.TableLabel1)
-        #layout.addWidget(self.ListOfSettings)
-        #layout.addLayout(buttonLayout)
         self.setLayout(settingWindowsLayout)
 
     def create_connections(self):
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
         self.buttonBox.button(QDialogButtonBox.Apply).clicked.connect(self.apply)
-        #self.ListOfSettings.connect(self.ListOfSettings, SIGNAL("item_clicked"), self.doNothing)
         self.ListOfSettings.selectionModel().currentChanged.connect(self.setFrameVisibility)
 
     def accept(self):
@@ -154,15 +141,11 @@ class settingsDlg(QDialog):
             #self.yaraSettingFrame.setVisible(False)
 
     def readSettingsData(self):
-        #see book page 285 how to show/hide frames
         settings = QSettings()
         settings_dict = settings.value('dictionary').toPyObject()
         # DEBUG
         #pp = pprint.PrettyPrinter(indent=4)
         #pp.pprint(settings_dict)
-
-        #if (dict.get('one') == 1):
-        #    print "mozole mozgu, medituj!"
 
         for key in settings_dict:
 
@@ -176,21 +159,31 @@ class settingsDlg(QDialog):
                 path_to_rules = settings_dict[QString('yara')][QString('rules_dir')][QString('path')]
                 self.inputRulesPath.setText(path_to_rules)
 
+            if key == "dump_dir":
+                path_to_dump = settings_dict[QString('dump_dir')]
+                self.inputDumpDirPath.setText(path_to_dump)
+
     def saveSettingsData(self):
         settings = QSettings()
         #get values of yara setting
         path_to_rules = self.inputRulesPath.text()
 
+        #get value of the dump_dir input
+        path_to_dump_dir = self.inputDumpDirPath.text()
+
         settings.setValue('dictionary', {'yara': {'rules_dir': {'path': path_to_rules}},
-                                         'foo': 'xxx',
+                                         'dump_dir': path_to_dump_dir,
                                          'bar': 2})
 
-    def getParticularSettingValue(self, keyword):
-        #expects key for searching in settings dict, returns associated value
-        settings = QSettings()
-        settings_dict = settings.value('dictionary').toPyObject()
+    #def getParticularSettingValue(self, keyword):
+    #    #expects key for searching in settings dict, returns associated value
+    #    settings = QSettings()
+    #    settings_dict = settings.value('dictionary').toPyObject()#
 
-        if keyword == 'yara_rules_dir':
-            return settings_dict[QString('yara')][QString('rules_dir')][QString('path')]
-        else:
-            return False
+    #    if keyword == 'yara_rules_dir':
+    #        return settings_dict[QString('yara')][QString('rules_dir')][QString('path')]
+
+    #    elif keyword == 'dump_dir':
+    #        return settings_dict[QString('dump_dir')]
+    #    else:
+    #        return False

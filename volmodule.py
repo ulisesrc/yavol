@@ -34,7 +34,7 @@ import volatility.plugins.malware.malfind as malfind
 import volatility.plugins.malware.svcscan as svcscan
 import volatility.plugins.malware.psxview as psxview
 import volatility.plugins.imageinfo as imageinfo
-
+import volatility.plugins.procdump as procdump
 from cStringIO import StringIO
 
 
@@ -57,10 +57,10 @@ class retObj():
 
 class VolatilityFunctions():
 
-    def __init__(self, fname, profile, yara_rules_path, output_path):
+    def __init__(self, queueObj):
         self.config = conf.ConfObject()
-        self.path = fname
-        self.profile = profile
+        self.path = queueObj.filename
+        self.profile = queueObj.profile
         registry.PluginImporter()
         registry.register_global_options(self.config, commands.Command)
         registry.register_global_options(self.config, addrspace.BaseAddressSpace)
@@ -72,9 +72,11 @@ class VolatilityFunctions():
             self.config.PROFILE = self.profile
         self.config.LOCATION = 'file://' + self.path
         self.config.OUTPUT = 'sqlite'
-        self.config.OUTPUT_FILE = output_path
+        self.config.OUTPUT_FILE = queueObj.output_path
         self.config.parse_options(False)
-        self.config.YARA_FILE = yara_rules_path
+        self.config.YARA_FILE = queueObj.yara_rule
+        self.config.DUMP_DIR = queueObj.dump_dir
+        self.config.PID = queueObj.pid
 
 
     def imageinfo(self):
@@ -85,6 +87,13 @@ class VolatilityFunctions():
         info_list = info_table.getvalue()
         return info_list
 
+    def procdump(self):
+        dump = procdump.ProcDump(self.config)
+        dump_table = StringIO()
+        dump_data = dump.calculate()
+        dump.render_text(dump_table, dump_data)
+        dump_list = dump_table.getvalue()
+        return dump_list
 
     def mlwr_yarascan(self):
 
@@ -97,7 +106,7 @@ class VolatilityFunctions():
 
 
     @logger
-    def runModule(self, name):
+    def runModule(self, moduleName):
         #print self.profile
 
         if self.profile == 'Use Imageinfo':
@@ -105,9 +114,13 @@ class VolatilityFunctions():
 
             return retObj(True, retValtxt)
 
+        elif moduleName == 'procdump':
+            retValtxt = self.procdump()
+            return retObj(True, None)
+
         else:
             cmds = registry.get_plugin_classes(commands.Command, lower = True)
-            command = cmds[name](self.config)
+            command = cmds[moduleName](self.config)
 
             try:
                 calc = command.calculate()

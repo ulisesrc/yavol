@@ -65,13 +65,15 @@ class ResultObj(QObject):
         self.retValObj = retValObj
 
 class QueueObj(QObject):
-    def __init__(self, volinstance, module, filename, profile, yara_rule_name, output_path):
-        self.module = module
+    def __init__(self, moduleName, filename, profile, yara_rule_name, output_path, \
+                 pid=None, dump_dir="dump/"):
+        self.moduleName = moduleName
         self.filename = filename
         self.profile = profile
-        self.volinst = volinstance
         self.yara_rule = yara_rule_name
         self.output_path = output_path
+        self.pid = pid
+        self.dump_dir = dump_dir
 
 class Worker(QThread):
     finished = pyqtSignal(object)
@@ -96,32 +98,22 @@ class Worker(QThread):
 
     def nigga(self, query):
 
-        result = None
-
-        volatilityInstance = query.volinst
-        moduleName = query.module
-        filename = query.filename
-        profile = query.profile
-        yara_rule = query.yara_rule
-        output_path = query.output_path
-        #yara_rules_path = settingsDlg.getParticularSettingValue('yara_rules_dir')
-
-        #if volatilityInstance == None:
-        volatilityInstance = volmodule.VolatilityFunctions(filename, profile, yara_rule, output_path)
-        # TODO: check if db already contains volmodule output before running the module
+        moduleName = query.moduleName
+        volatilityInstance = volmodule.VolatilityFunctions(query)
         retObj = volatilityInstance.runModule(moduleName)
 
-        #self.finished.emit(ResultObj(moduleName, retObj, volatilityInstance))
         self.finished.emit(ResultObj(moduleName, retObj))
 
 class TableWidget(QTableWidget):
 
-    def __init__(self, data, *args):
+    def __init__(self, window_class, data, tabName, *args):
         QTableWidget.__init__(self, *args)
         self.data = data
         self.setmydata()
         self.resizeColumnsToContents()
         self.resizeRowsToContents()
+        self.tabName = tabName
+        self.window = window_class  # we need pointer to this class to add jobs to the queue
 
     def setmydata(self):
 
@@ -139,6 +131,12 @@ class TableWidget(QTableWidget):
         menu = QMenu(self)
         clipboardAction = menu.addAction("Copy to clipboard")
         googleSearchAction = menu.addAction("Search with Google")
+
+        #if tab name is pslist, psscan, psxview
+        dumpProcMem = None
+        if self.tabName == 'pslist' or self.tabName == 'psscan' or self.tabName == 'psxview':
+            dumpProcMem = menu.addAction("Dump proc exec")
+
         action = menu.exec_(self.mapToGlobal(event.pos()))
         if action == clipboardAction:
             cb = QApplication.clipboard()
@@ -146,11 +144,33 @@ class TableWidget(QTableWidget):
 
             for item in self.selectedItems():
                 cb.setText(item.text(), mode=cb.Clipboard)
+
         if action == googleSearchAction:
             items = self.selectedItems()
             search_string = "https://www.google.com/search?q=" + items[0].text()
             webbrowser.open(search_string)
 
+        if action == dumpProcMem:
+            rows = sorted(set(index.row() for index in
+                      self.selectedIndexes()))
+
+            headercount = self.columnCount()
+            # for each selected row get me the PID of the process
+            for row in rows:
+                #print('Row %d is selected' % row)
+
+                #get pids from those rows
+                for x in range(0, headercount, 1):
+                    headertext = self.horizontalHeaderItem(x).text()
+                    if headertext == 'PID':
+                        matchcol = x
+                        break
+
+                pid = self.item(row,matchcol).text()
+                #call procdump module with the PID
+                dump_dir =  self.window.getParticularSettingValue('dump_dir')
+                self.window.thread_process('procdump', self.window.fullpath, self.window.profile, None, \
+                                           self.window.output_path, pid=pid, dump_dir=dump_dir)
 
 class Window(QMainWindow):
     def __init__(self, parent=None):
@@ -163,6 +183,7 @@ class Window(QMainWindow):
         self.filename = None
         self.dir = None
         self.fullpath = None
+        self.dump_dir = None
         self.file_size = 0
         self.output_path = "tmp/output.sqlite"
         self.user_db_path = ""
@@ -336,7 +357,7 @@ class Window(QMainWindow):
         # First app start only, set the defaults
         if settings.value('dictionary') == None:
             settings.setValue('dictionary', {'yara': {'rules_dir': {'path': '~/git/yavol_gt/yara'}},
-                                             'foo': 'xxx',
+                                             'dump_dir': 'dump/',
                                              'bar': 2})
 
         return settings
@@ -346,16 +367,31 @@ class Window(QMainWindow):
         if dialog.exec_():
             pass
 
+    def getParticularSettingValue(self, keyword):
+        #expects key for searching in settings dict, returns associated value
+        settings_dict = self.settings.value('dictionary').toPyObject()
+
+        if keyword == 'yara_rules_dir':
+            return str(settings_dict[QString('yara')][QString('rules_dir')][QString('path')])
+
+        elif keyword == 'dump_dir':
+            return str(settings_dict[QString('dump_dir')])
+        else:
+            return False
+
     def showYaraScanDialog(self):
 
         #check if we got a memory image file opened
         if self.filename:
 
             #TODO: create a method that will return particular values from the QSettings object
-            settings = QSettings()
-            settings_dict = settings.value('dictionary').toPyObject()
+            #settings = QSettings()
+            #settings_dict = self.settings.value('dictionary').toPyObject()
 
-            path_to_rules = settings_dict[QString('yara')][QString('rules_dir')][QString('path')]
+            #path_to_rules = settings_dict[QString('yara')][QString('rules_dir')][QString('path')]
+
+            path_to_rules = self.getParticularSettingValue('yara_rules_dir')
+
             dialog = yarascanDlg.yarascanDlg(path_to_rules)
             if dialog.exec_():
                 #check if the returned array of signatures is empty
@@ -592,7 +628,9 @@ class Window(QMainWindow):
                 else:
                     self.addToTab(moduleName, 'list', 'No hit!')
 
-
+        elif moduleName == 'procdump': # we've dumped some content, no db entry made
+            #I should check for the return value of the module and handle error properly
+            self.displayInLog("procdump finished")
 
         else:   #output of the rest of the modules will be shown right away in a tab
             # textVal is used only with imageinfo module
@@ -648,7 +686,7 @@ class Window(QMainWindow):
                 number = hex(int(value))
                 list[index] = number
 
-    def thread_process(self, volinstance, moduleName, filename, profile, yara_rule_path, output_path):
+    def thread_process(self, moduleName, filename, profile, yara_rule_path, output_path, pid=None, dump_dir="dump/"):
         MAX_CORES = 2
         self.queue = queue.Queue()
         self.threads = []
@@ -657,7 +695,7 @@ class Window(QMainWindow):
             self.threads.append(thread)
             thread.start()
 
-        query = QueueObj(volinstance, moduleName, filename, profile, yara_rule_path, output_path)
+        query = QueueObj(moduleName, filename, profile, yara_rule_path, output_path, pid, dump_dir)
 
         self.queue.put(query)
 
@@ -703,21 +741,18 @@ class Window(QMainWindow):
                 #we dont have this output in our db
                 self.status.showMessage("Creating %s output" % moduleName, 5000)
                 self.displayInLog("%s with a profile called!" % moduleName)
-
-                if self.volatilityInstance != None:
-                    self.displayInLog("Info: Volatility instance found")
-                    if self.path_to_yara_rule:
-                        self.thread_process(self.volatilityInstance, moduleName, self.fullpath, self.profile,
+                # TODO: remove check for volatilityInstance, this is no longer in use!!!
+                #if self.volatilityInstance != None:
+                #    self.displayInLog("Info: Volatility instance found")
+                if self.path_to_yara_rule:
+                    self.thread_process(moduleName, self.fullpath, self.profile,
                                             self.path_to_yara_rule, self.output_path)
-                    else:
-                        self.thread_process(self.volatilityInstance, moduleName, self.fullpath, self.profile,
-                                            None, self.output_path)
                 else:
-                    self.displayInLog("Info: Volatility instance missing!")
-                    if self.path_to_yara_rule:
-                        self.thread_process(None, moduleName, self.fullpath, self.profile, self.path_to_yara_rule, self.output_path)
-                    else:
-                        self.thread_process(None, moduleName, self.fullpath, self.profile, None, self.output_path)
+                    self.thread_process(moduleName, self.fullpath, self.profile,
+                                            None, self.output_path)
+
+                self.dirty = True
+
         else:
             # we dont have an image file opened
             self.showWarningInfo('Cannot process', 'No image file specified\n Open a memory image file first.')
@@ -747,7 +782,7 @@ class Window(QMainWindow):
             num_of_rows = len(content[content.keys()[0]])
             #tableWidget = QTableWidget(num_of_rows, num_of_columns)
 
-            tableWidget = TableWidget(content, num_of_rows, num_of_columns)
+            tableWidget = TableWidget(self, content, tabName, num_of_rows, num_of_columns)
             tabLayout.addWidget(tableWidget)
 
         self.addTabFnc(tabName, tabLayout)
