@@ -26,7 +26,7 @@ from PyQt4.QtGui import QMainWindow, QTabWidget, QDockWidget, QListWidget, QLabe
                         QComboBox, QTableWidgetItem, QAbstractItemView, QGridLayout, QSpacerItem, QSizePolicy, \
                         QMenu, QApplication
 
-from os import remove, path
+from os import remove, path, makedirs
 
 import resources
 
@@ -453,6 +453,10 @@ class Window(QMainWindow):
         fname = unicode(QFileDialog.getOpenFileName(self, "YaVol - Choose Image", wdir,
                                                     "Memory files (%s)" % " ".join(formats)))
         if fname:
+
+            #check if the tmp dir exists
+            if not path.exists('tmp'):
+                makedirs('tmp')
 
             #check if we already got tmp file created (user opened something before)
             if path.isfile('tmp/output.sqlite'):
